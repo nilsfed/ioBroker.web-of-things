@@ -1,0 +1,79 @@
+{
+	"common": {
+		"name": "web-of-things",
+		"version": "0.0.2",
+		"news": {
+			"0.0.1": {
+				"en": "initial release",
+				"de": "Erstveröffentlichung",
+				"ru": "Начальная версия",
+				"pt": "lançamento inicial",
+				"nl": "Eerste uitgave",
+				"fr": "Première version",
+				"it": "Versione iniziale",
+				"es": "Versión inicial",
+				"pl": "Pierwsze wydanie",
+				"zh-cn": "首次出版"
+			}
+		},
+		"titleLang": {
+			"en": "Web of Things",
+			"de": "Netz der Dinge",
+			"ru": "Сеть вещей",
+			"pt": "Teia de Coisas",
+			"nl": "Web van dingen",
+			"fr": "Web des objets",
+			"it": "La rete delle cose",
+			"es": "Web de las cosas",
+			"pl": "Sieć rzeczy",
+			"zh-cn": "物联网"
+		},
+		"desc": {
+			"en": "Experimentational Web of Things Adapter",
+			"de": "Experimenteller Web-of-Things-Adapter",
+			"ru": "Экспериментальный адаптер Web of Things",
+			"pt": "Adaptador Experimentational Web of Things",
+			"nl": "Experimentele Web of Things-adapter",
+			"fr": "Adaptateur expérimental pour le Web des objets",
+			"it": "Adattatore sperimentale per il Web of Things",
+			"es": "Adaptador de Web of Things experimental",
+			"pl": "Eksperymentalny adapter sieci rzeczy",
+			"zh-cn": "实验性物联网适配器"
+		},
+		"authors": [
+			"Nils Federle <nils.federle@gmail.com>"
+		],
+		"keywords": [
+			"ioBroker",
+			"template",
+			"Smart Home",
+			"home automation"
+		],
+		"license": "MIT",
+		"platform": "Javascript/Node.js",
+		"main": "main.js",
+		"icon": "web-of-things.png",
+		"enabled": true,
+		"extIcon": "https://raw.githubusercontent.com/nilsfed/ioBroker.web-of-things/master/admin/web-of-things.png",
+		"readme": "https://github.com/nilsfed/ioBroker.web-of-things/blob/master/README.md",
+		"loglevel": "info",
+		"mode": "daemon",
+		"type": "hardware",
+		"compact": true,
+		"connectionType": "local",
+		"dataSource": "poll",
+		"materialize": true,
+		"dependencies": [
+			{
+				"js-controller": ">=2.0.0"
+			}
+		]
+	},
+	"native": {
+		"option1": true,
+		"optionIPAddr": "192.168.178.1",
+		"option2": "42"
+	},
+	"objects": [],
+	"instanceObjects": []
+}
