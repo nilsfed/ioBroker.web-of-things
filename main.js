@@ -10,6 +10,11 @@ const utils = require("@iobroker/adapter-core");
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
+const axios = require("axios");
+
+
+const { Servient, Helpers } = require("@node-wot/core");
+const { HttpClientFactory } = require("@node-wot/binding-http");
 
 class WebOfThings extends utils.Adapter {
 
@@ -38,9 +43,19 @@ class WebOfThings extends utils.Adapter {
 		// this.config:
 		this.log.info("config option1: " + this.config.option1);
 		this.log.info("config option2: " + this.config.option2);
-		this.log.info("config optionIPAddr: "+ this.config.optionIPAddr);
+		this.log.info("config optionIPAddr: " + this.config.optionIPAddr);
 		this.log.info("Hi there!");
 		this.log.info("That's cool!");
+
+
+		const servient = new Servient();
+		servient.addClientFactory(new HttpClientFactory(null));
+		const WoTHelpers = new Helpers(servient);
+
+
+
+
+
 		/*
 		For every state in the system there has to be also an object of type state
 		Here a simple template for a boolean variable named "testVariable"
@@ -57,6 +72,35 @@ class WebOfThings extends utils.Adapter {
 			},
 			native: {},
 		});
+
+		await this.setObjectNotExistsAsync("thingDescription", {
+			type: "state",
+			common: {
+				name: "thingDescription",
+				type: "string",
+				role: "indicator",
+				read: true,
+				write: true,
+			},
+			native: {},
+		});
+
+		this.subscribeStates("thingDescription");
+
+		WoTHelpers.fetch("http://" + this.config.optionIPAddr + "/").then(async (td) => {
+			try {
+				servient.start().then(async (WoT) => {
+					// Then from here on you can consume the thing
+					let thing = await WoT.consume(td);
+					await this.setStateAsync("thingDescription", JSON.stringify(thing.getThingDescription()));
+					this.log.info("Consumed Thing: "+ JSON.stringify(thing.getThingDescription()));
+				});
+			}
+			catch (err) {
+				console.error("Script error:", err);
+			}
+		}).catch((err) => { console.error("Fetch error:", err); });
+
 
 		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
 		this.subscribeStates("testVariable");

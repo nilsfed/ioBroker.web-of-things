@@ -19,7 +19,15 @@
     "url": "https://github.com/nilsfed/ioBroker.web-of-things"
   },
   "dependencies": {
-    "@iobroker/adapter-core": "^2.5.1"
+    "@iobroker/adapter-core": "^2.5.1",
+    "@node-wot/binding-coap": "0.7.1",
+    "@node-wot/binding-file": "0.7.1",
+    "@node-wot/binding-http": "0.7.4",
+    "@node-wot/binding-mqtt": "0.7.1",
+    "@node-wot/binding-websockets": "0.7.1",
+    "@node-wot/cli": "0.7.1",
+    "@node-wot/core": "0.7.1",
+    "axios": "^0.21.0"
   },
   "devDependencies": {
     "@alcalzone/release-script": "^2.2.1",
