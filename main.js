@@ -15,6 +15,7 @@ const axios = require("axios");
 
 const { Servient, Helpers } = require("@node-wot/core");
 const { HttpClientFactory } = require("@node-wot/binding-http");
+const { strict } = require("assert");
 
 class WebOfThings extends utils.Adapter {
 
@@ -45,7 +46,6 @@ class WebOfThings extends utils.Adapter {
 		this.log.info("config option2: " + this.config.option2);
 		this.log.info("config optionIPAddr: " + this.config.optionIPAddr);
 		this.log.info("Hi there!");
-		this.log.info("That's cool!");
 
 
 		const servient = new Servient();
@@ -87,13 +87,27 @@ class WebOfThings extends utils.Adapter {
 
 		this.subscribeStates("thingDescription");
 
+		this.createDevice("plantDevice");
+		this.createChannel("plantDevice", "plantSensorChannel");
+
+		this.createState("plantDevice", "plantSensorChannel", "testState", {
+			name: "testState",
+			type: "string",
+			role: "indicator",
+			read: true,
+			write: true,
+		});
+
 		WoTHelpers.fetch("http://" + this.config.optionIPAddr + "/").then(async (td) => {
 			try {
 				servient.start().then(async (WoT) => {
 					// Then from here on you can consume the thing
-					let thing = await WoT.consume(td);
-					await this.setStateAsync("thingDescription", JSON.stringify(thing.getThingDescription()));
-					this.log.info("Consumed Thing: "+ JSON.stringify(thing.getThingDescription()));
+					this.thing = await WoT.consume(td);
+
+					await this.updateThingProperties(this.thing);
+
+					//await this.setStateAsync("thingDescription", JSON.stringify(thing.getThingDescription()));
+					//this.log.info("Consumed Thing: " + JSON.stringify(thing.getThingDescription()));
 				});
 			}
 			catch (err) {
@@ -129,6 +143,47 @@ class WebOfThings extends utils.Adapter {
 
 		result = await this.checkGroupAsync("admin", "admin");
 		this.log.info("check group user admin group admin: " + result);
+	}
+
+	async updateThingProperties(thing) {
+		let thing_description = await thing.getThingDescription();
+		let all_properties = await thing.readAllProperties();
+
+		this.thing_title = thing_description["title"];
+
+		this.writeProperties = {};
+
+		/* for (let key in all_properties) {
+			this.mySensorData.push({
+				name: key,
+				value: all_properties[key],
+				unit: thing_description["properties"][key]["unit"],
+				readOnly: thing_description["properties"][key]["readOnly"],
+				type: thing_description["properties"][key]["type"],
+				minimum: thing_description["properties"][key]["minimum"],
+				maximum: thing_description["properties"][key]["maximum"],
+				updateWritableProperty: async (propertyName, value) => {
+					console.log("update property " + propertyName + " value to " + value);
+					await thing.writeProperty(propertyName, { [propertyName]: value });
+				}
+			});
+		}
+		this.log.info("MySensorData: " + this.mySensorData); */
+
+		for (let key in all_properties) {
+			this.createState("plantDevice", "plantSensorChannel", key, {
+				name: key,
+				type: thing_description["properties"][key]["type"],
+				unit: thing_description["properties"][key]["unit"],
+				min: thing_description["properties"][key]["minimum"],
+				max: thing_description["properties"][key]["maximum"],
+				role: "indicator",
+				read: true,
+				write: !thing_description["properties"][key]["readOnly"],
+			});
+			this.setState("plantDevice.plantSensorChannel." + key, { val: all_properties[key] });
+			this.subscribeStates("plantDevice.plantSensorChannel." + key);
+		}
 	}
 
 	/**
@@ -175,6 +230,14 @@ class WebOfThings extends utils.Adapter {
 		if (state) {
 			// The state was changed
 			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+			this.log.debug("change from: " + state.from);
+			if (state.from != "system.adapter." + this.common.name + "." + this.instance.toString()) {
+				this.log.debug("State change from outside of adapter.");
+				this.log.debug("ID: "+ id);
+				let propertyName = id.split(".").pop();
+				this.log.debug("propertyName: "+ propertyName);
+				this.thing.writeProperty(propertyName, { [propertyName]: state.val });
+			}
 		} else {
 			// The state was deleted
 			this.log.info(`state ${id} deleted`);
