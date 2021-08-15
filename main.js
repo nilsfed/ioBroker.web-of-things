@@ -10,12 +10,10 @@ const utils = require("@iobroker/adapter-core");
 
 // Load your modules here, e.g.:
 // const fs = require("fs");
-const axios = require("axios");
 
 
 const { Servient, Helpers } = require("@node-wot/core");
 const { HttpClientFactory } = require("@node-wot/binding-http");
-const { strict } = require("assert");
 
 class WebOfThings extends utils.Adapter {
 
