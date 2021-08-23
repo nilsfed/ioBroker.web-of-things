@@ -14,7 +14,6 @@ const utils = require("@iobroker/adapter-core");
 
 const { Servient, Helpers } = require("@node-wot/core");
 const { HttpClientFactory } = require("@node-wot/binding-http");
-const { SSL_OP_EPHEMERAL_RSA } = require("constants");
 
 class WebOfThings extends utils.Adapter {
 
