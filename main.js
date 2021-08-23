@@ -160,26 +160,6 @@ class WebOfThings extends utils.Adapter {
 		}
 	}
 
-	/**
-	 * Is called when adapter shuts down - callback has to be called under any circumstances!
-	 * @param {() => void} callback
-	 */
-	onUnload(callback) {
-		try {
-			// Here you must clear all timeouts or intervals that may still be active
-			// clearTimeout(timeout1);
-			// clearTimeout(timeout2);
-			// ...
-			// clearInterval(interval1);
-			clearInterval(this.updateThingPropertiesInterval);
-			this.log.debug("cancelled all timers");
-			callback();
-		} catch (e) {
-			this.log.error(e);
-			callback();
-		}
-	}
-
 	// If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
 	// You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
 	// /**
@@ -239,6 +219,26 @@ class WebOfThings extends utils.Adapter {
 	// 		}
 	// 	}
 	// }
+
+	/**
+	 * Is called when adapter shuts down - callback has to be called under any circumstances!
+	 * @param {() => void} callback
+	 */
+	onUnload(callback) {
+		try {
+			// Here you must clear all timeouts or intervals that may still be active
+			// clearTimeout(timeout1);
+			// clearTimeout(timeout2);
+			// ...
+			// clearInterval(interval1);
+			clearInterval(this.updateThingPropertiesInterval);
+			this.log.debug("cancelled all timers");
+			callback();
+		} catch (e) {
+			this.log.error(e);
+			callback();
+		}
+	}
 
 }
 
