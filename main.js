@@ -14,6 +14,7 @@ const utils = require("@iobroker/adapter-core");
 
 const { Servient, Helpers } = require("@node-wot/core");
 const { HttpClientFactory } = require("@node-wot/binding-http");
+const { SSL_OP_EPHEMERAL_RSA } = require("constants");
 
 class WebOfThings extends utils.Adapter {
 
@@ -52,49 +53,34 @@ class WebOfThings extends utils.Adapter {
 
 
 
-
-
 		/*
 		For every state in the system there has to be also an object of type state
 		Here a simple template for a boolean variable named "testVariable"
 		Because every adapter instance uses its own unique namespace variable names can't collide with other adapters variables
 		*/
-		await this.setObjectNotExistsAsync("testVariable", {
-			type: "state",
-			common: {
-				name: "testVariable",
-				type: "boolean",
-				role: "indicator",
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
+		// await this.setObjectNotExistsAsync("testVariable", {
+		// 	type: "state",
+		// 	common: {
+		// 		name: "testVariable",
+		// 		type: "boolean",
+		// 		role: "indicator",
+		// 		read: true,
+		// 		write: true,
+		// 	},
+		// 	native: {},
+		// });
 
-		await this.setObjectNotExistsAsync("thingDescription", {
-			type: "state",
-			common: {
-				name: "thingDescription",
-				type: "string",
-				role: "indicator",
-				read: true,
-				write: true,
-			},
-			native: {},
-		});
 
-		this.subscribeStates("thingDescription");
+		await this.createDevice("plantDevice");
+		await this.createChannel("plantDevice", "plantSensorChannel");
 
-		this.createDevice("plantDevice");
-		this.createChannel("plantDevice", "plantSensorChannel");
-
-		this.createState("plantDevice", "plantSensorChannel", "testState", {
-			name: "testState",
-			type: "string",
-			role: "indicator",
-			read: true,
-			write: true,
-		});
+		// this.createState("plantDevice", "plantSensorChannel", "testState", {
+		// 	name: "testState",
+		// 	type: "string",
+		// 	role: "indicator",
+		// 	read: true,
+		// 	write: true,
+		// });
 
 		WoTHelpers.fetch("http://" + this.config.optionIPAddr + "/").then(async (td) => {
 			try {
@@ -102,18 +88,17 @@ class WebOfThings extends utils.Adapter {
 					// Then from here on you can consume the thing
 					this.thing = await WoT.consume(td);
 
-					await this.updateThingProperties(this.thing);
+					await this.createThingProperties(this.thing);
+					this.updateThingPropertiesInterval = setInterval(() => this.updateThingProperties(this.thing) , 10000);
 
-					//await this.setStateAsync("thingDescription", JSON.stringify(thing.getThingDescription()));
-					//this.log.info("Consumed Thing: " + JSON.stringify(thing.getThingDescription()));
 				});
 			}
 			catch (err) {
-				console.error("Script error:", err);
+				this.log.error("Script error:" + err);
 			}
-		}).catch((err) => { console.error("Fetch error:", err); });
+		}).catch((err) => { this.log.error("Fetch error:" + err); });
 
-
+	/*
 		// In order to get state updates, you need to subscribe to them. The following line adds a subscription for our variable we have created above.
 		this.subscribeStates("testVariable");
 		// You can also add a subscription for multiple states. The following line watches all states starting with "lights."
@@ -121,10 +106,9 @@ class WebOfThings extends utils.Adapter {
 		// Or, if you really must, you can also watch all states. Don't do this if you don't need to. Otherwise this will cause a lot of unnecessary load on the system:
 		// this.subscribeStates("*");
 
-		/*
-			setState examples
-			you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
-		*/
+		//	setState examples
+		//	you will notice that each setState will cause the stateChange event to fire (because of above subscribeStates cmd)
+
 		// the variable testVariable is set to true as command (ack=false)
 		await this.setStateAsync("testVariable", true);
 
@@ -141,32 +125,14 @@ class WebOfThings extends utils.Adapter {
 
 		result = await this.checkGroupAsync("admin", "admin");
 		this.log.info("check group user admin group admin: " + result);
+	*/
 	}
 
-	async updateThingProperties(thing) {
+	async createThingProperties(thing) {
 		let thing_description = await thing.getThingDescription();
 		let all_properties = await thing.readAllProperties();
 
 		this.thing_title = thing_description["title"];
-
-		this.writeProperties = {};
-
-		/* for (let key in all_properties) {
-			this.mySensorData.push({
-				name: key,
-				value: all_properties[key],
-				unit: thing_description["properties"][key]["unit"],
-				readOnly: thing_description["properties"][key]["readOnly"],
-				type: thing_description["properties"][key]["type"],
-				minimum: thing_description["properties"][key]["minimum"],
-				maximum: thing_description["properties"][key]["maximum"],
-				updateWritableProperty: async (propertyName, value) => {
-					console.log("update property " + propertyName + " value to " + value);
-					await thing.writeProperty(propertyName, { [propertyName]: value });
-				}
-			});
-		}
-		this.log.info("MySensorData: " + this.mySensorData); */
 
 		for (let key in all_properties) {
 			this.createState("plantDevice", "plantSensorChannel", key, {
@@ -179,8 +145,19 @@ class WebOfThings extends utils.Adapter {
 				read: true,
 				write: !thing_description["properties"][key]["readOnly"],
 			});
-			this.setState("plantDevice.plantSensorChannel." + key, { val: all_properties[key] });
 			this.subscribeStates("plantDevice.plantSensorChannel." + key);
+			this.setState("plantDevice.plantSensorChannel." + key, { val: all_properties[key] }, true);
+		}
+	}
+
+	async updateThingProperties(thing) {
+		try {
+			let all_properties = await thing.readAllProperties();
+
+			for (let key in all_properties) {
+				this.setState("plantDevice.plantSensorChannel." + key, { val: all_properties[key] }, true);}
+		} catch (error) {
+			this.log.info("update properties failed");
 		}
 	}
 
@@ -195,9 +172,11 @@ class WebOfThings extends utils.Adapter {
 			// clearTimeout(timeout2);
 			// ...
 			// clearInterval(interval1);
-
+			clearInterval(this.updateThingPropertiesInterval);
+			this.log.debug("cancelled all timers");
 			callback();
 		} catch (e) {
+			this.log.error(e);
 			callback();
 		}
 	}
@@ -230,11 +209,13 @@ class WebOfThings extends utils.Adapter {
 			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
 			this.log.debug("change from: " + state.from);
 			if (state.from != "system.adapter." + this.common.name + "." + this.instance.toString()) {
-				this.log.debug("State change from outside of adapter.");
+				this.log.debug("State change from outside of adapter. -> Write Property");
 				this.log.debug("ID: "+ id);
 				let propertyName = id.split(".").pop();
 				this.log.debug("propertyName: "+ propertyName);
 				this.thing.writeProperty(propertyName, { [propertyName]: state.val });
+				//set ACK true after writing property
+				this.setState(id, state.val, true);
 			}
 		} else {
 			// The state was deleted
