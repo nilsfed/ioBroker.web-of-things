@@ -235,7 +235,6 @@ class WebOfThings extends utils.Adapter {
 			this.log.debug("cancelled all timers");
 			callback();
 		} catch (e) {
-			this.log.error(e);
 			callback();
 		}
 	}
