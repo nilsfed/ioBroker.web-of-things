@@ -72,6 +72,7 @@ class WebOfThings extends utils.Adapter {
 
 		await this.createDevice("plantDevice");
 		await this.createChannel("plantDevice", "plantSensorChannel");
+		await this.createChannel("plantDevice", "plantActionChannel");
 
 		// this.createState("plantDevice", "plantSensorChannel", "testState", {
 		// 	name: "testState",
@@ -89,6 +90,8 @@ class WebOfThings extends utils.Adapter {
 
 					await this.createThingProperties(this.thing);
 					this.updateThingPropertiesInterval = setInterval(() => this.updateThingProperties(this.thing) , 10000);
+
+					await this.createThingActions(this.thing);
 
 				});
 			}
@@ -160,6 +163,42 @@ class WebOfThings extends utils.Adapter {
 		}
 	}
 
+	async createThingActions(thing) {
+		let thing_description = await thing.getThingDescription();
+		this.URIData = {};
+
+		for (var action in thing_description["actions"]) {
+			this.createState("plantDevice", "plantActionChannel", action, {
+				name: action,
+				type: "boolean",
+				read: true,
+				write: true,
+				role: "state",
+			});
+			this.subscribeStates("plantDevice.plantActionChannel." + action);
+			this.setState("plantDevice.plantActionChannel." + action, { val: false }, true);
+
+			if ("uriVariables" in  thing_description["actions"][action]){
+				this.URIData[action] = {};
+				await this.createChannel("plantDevice", "plantActionURIChannel");
+				for (var uriVariable in thing_description["actions"][action]["uriVariables"]) {
+					let uri_name = ""+action+"_"+uriVariable;
+					this.createState("plantDevice", "plantActionURIChannel", uri_name, {
+						name: uri_name,
+						type: "number",
+						min: thing_description["actions"][action]["uriVariables"][uriVariable]["minimum"],
+						max: thing_description["actions"][action]["uriVariables"][uriVariable]["maximum"],
+						read: true,
+						write: true,
+						role: "state",
+					});
+					this.subscribeStates("plantDevice.plantActionURIChannel." + uri_name);
+					this.setState("plantDevice.plantActionURIChannel." + uri_name, { val: null }, true);
+				}
+			}
+		}
+	}
+
 	// If you need to react to object changes, uncomment the following block and the corresponding line in the constructor.
 	// You also need to subscribe to the objects with `this.subscribeObjects`, similar to `this.subscribeStates`.
 	// /**
@@ -187,14 +226,48 @@ class WebOfThings extends utils.Adapter {
 			// The state was changed
 			this.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
 			this.log.debug("change from: " + state.from);
-			if (state.from != "system.adapter." + this.common.name + "." + this.instance.toString()) {
-				this.log.debug("State change from outside of adapter. -> Write Property");
-				this.log.debug("ID: "+ id);
-				let propertyName = id.split(".").pop();
-				this.log.debug("propertyName: "+ propertyName);
-				this.thing.writeProperty(propertyName, { [propertyName]: state.val });
-				//set ACK true after writing property
-				this.setState(id, state.val, true);
+
+			//Property Change from Outside of Adapter
+			if (id.includes(this.common.name + "." + this.instance.toString()+".plantDevice.plantSensorChannel")){
+				if (state.from != "system.adapter." + this.common.name + "." + this.instance.toString()) {
+					this.log.debug("State change from outside of adapter. -> Write Property");
+					this.log.debug("ID: "+ id);
+					let propertyName = id.split(".").pop();
+					this.log.debug("propertyName: "+ propertyName);
+					this.thing.writeProperty(propertyName, { [propertyName]: state.val });
+					//set ACK true after writing property
+					this.setState(id, state.val, true);
+				}
+			}
+
+			//Action Trigger
+			if (id.includes(this.common.name + "." + this.instance.toString()+".plantDevice.plantActionChannel")){
+				if (state.val == true){
+					this.log.debug("ID: "+ id);
+					let actionName = id.split(".").pop();
+					this.log.debug("actionName: "+ actionName);
+					this.thing.invokeAction(actionName, undefined, {uriVariables: this.URIData[actionName]});
+					//set trigger/toggle boolean false and ACK true after writing property
+					this.setState(id, false, true);
+				}
+			}
+
+			//URI Variable Change
+			if (id.includes(this.common.name + "." + this.instance.toString()+".plantDevice.plantActionURIChannel")){
+				this.log.info("ID: "+ id);
+				let actionAndURIName = id.split(".").pop();
+				let actionAndURINameParts = actionAndURIName.split("_")
+				let URIName = actionAndURINameParts.pop();
+				let actionName = actionAndURINameParts.join("_");
+				this.log.info("actionName: "+ actionName);
+				this.log.info("URIName: "+ URIName);
+
+				this.URIData[actionName][URIName] = state.val;
+				this.log.info("URI_DATA: "+ JSON.stringify(this.URIData));
+
+				//this.thing.invokeAction(actionName, undefined, {uriVariables: null});
+				//set trigger/toggle boolean false and ACK true after writing property
+				//this.setState(id, state.val, true);
 			}
 		} else {
 			// The state was deleted
