@@ -226,12 +226,12 @@ class WebOfThings extends utils.Adapter {
 
 			thing.subscribeEvent(event, data => {
 				data = JSON.parse(data);
-				this.log.error("critical-plant-status event: "+ data.data);
+				this.log.info("critical-plant-status event: "+ data.data);
 				this.setState("plantDevice.plantEventChannel." + event, { val: true }, true);
 				this.setState("plantDevice.plantEventChannel." + event+"Content", { val:  data.data }, true);
 			}, )
 				.then(() => {
-					this.log.error("Subscribed to Event: "+ event);
+					this.log.info("Subscribed to Event: "+ event);
 				})
 				.catch((e) => {
 					this.log.error("onError: %s"+ e);
