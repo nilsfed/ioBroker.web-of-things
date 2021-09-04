@@ -73,6 +73,7 @@ class WebOfThings extends utils.Adapter {
 		await this.createDevice("plantDevice");
 		await this.createChannel("plantDevice", "plantSensorChannel");
 		await this.createChannel("plantDevice", "plantActionChannel");
+		await this.createChannel("plantDevice", "plantEventChannel");
 
 		// this.createState("plantDevice", "plantSensorChannel", "testState", {
 		// 	name: "testState",
@@ -92,6 +93,7 @@ class WebOfThings extends utils.Adapter {
 					this.updateThingPropertiesInterval = setInterval(() => this.updateThingProperties(this.thing) , 10000);
 
 					await this.createThingActions(this.thing);
+					await this.subscribeThingEvents(this.thing);
 
 				});
 			}
@@ -196,6 +198,44 @@ class WebOfThings extends utils.Adapter {
 					this.setState("plantDevice.plantActionURIChannel." + uri_name, { val: null }, true);
 				}
 			}
+		}
+	}
+
+	async subscribeThingEvents(thing) {
+		let thing_description = await thing.getThingDescription();
+
+		for (let event in thing_description["events"]) {
+			this.createState("plantDevice", "plantEventChannel", event, {
+				name: event,
+				type: "boolean",
+				read: true,
+				write: true,
+				role: "state",
+			});
+			this.subscribeStates("plantDevice.plantEventChannel." + event);
+			this.setState("plantDevice.plantEventChannel." + event, { val: false }, true);
+
+			this.createState("plantDevice", "plantEventChannel", event+"Content", {
+				name: event+"Content",
+				type: "string",
+				read: true,
+				write: true,
+				role: "state",
+			});
+			this.subscribeStates("plantDevice.plantEventChannel." + event+"Content");
+
+			thing.subscribeEvent(event, data => {
+				data = JSON.parse(data);
+				this.log.error("critical-plant-status event: "+ data.data);
+				this.setState("plantDevice.plantEventChannel." + event, { val: true }, true);
+				this.setState("plantDevice.plantEventChannel." + event+"Content", { val:  data.data }, true);
+			}, )
+				.then(() => {
+					this.log.error("Subscribed to Event: "+ event);
+				})
+				.catch((e) => {
+					this.log.error("onError: %s"+ e);
+				});
 		}
 	}
 
